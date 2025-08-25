@@ -27,7 +27,7 @@ class SessionManager:
     ) -> str:
         """Send a message to an agent and return the response"""
         try:
-            response_stream = self.agent_manager._client.agents.turn.create(
+            response_stream = self.agent_manager.create_agent_turn(
                 agent_id=agent_id,
                 session_id=session_id,
                 stream=True,
@@ -63,7 +63,7 @@ class SessionManager:
 
         # Create a new session for the specialist agent
         session_name = self._generate_session_name(user_id, agent_name)
-        new_session = self.agent_manager._client.agents.session.create(
+        new_session = self.agent_manager.create_session(
             new_agent_id, session_name=session_name
         )
 
@@ -90,7 +90,7 @@ class SessionManager:
                 return "Error: Core routing agent not available."
 
             session_name = self._generate_session_name(user_id)
-            session = self.agent_manager._client.agents.session.create(
+            session = self.agent_manager.create_session(
                 routing_agent_id, session_name=session_name
             )
             self.user_sessions[user_id] = {
