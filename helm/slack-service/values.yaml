@@ -1,7 +1,7 @@
 replicaCount: 1
 
 image:
-  repository: quay.io/ecosystem-appeng/self-service-agent-slack-service
+  repository:  quay.io/rh-ee-lbitan/slack-service
   pullPolicy: Always
 
 # Image pull secrets

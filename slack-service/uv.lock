@@ -589,6 +589,18 @@ wheels = [
 ]
 
 [[package]]
+name = "slack-bolt"
+version = "1.24.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "slack-sdk" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/06/af/95750d5c7f56be5266e6e4eb6b44f689423f44f0d2e2fa222e2c4c808305/slack_bolt-1.24.0.tar.gz", hash = "sha256:203249338454d3c8d096a6a1f4ebe09f48da2f572268835d1c5ed2a64eae898d", size = 131100, upload-time = "2025-08-27T18:51:40.026Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/ee/31/61985f6fe279e247789040f1c726a6b09e4c0388f1ba7265b1705956fed7/slack_bolt-1.24.0-py2.py3-none-any.whl", hash = "sha256:10245bac8b6768434885cc6e896a91daf815f1f566e83c0ddb6ad846d838248e", size = 230046, upload-time = "2025-08-27T18:51:38.326Z" },
+]
+
+[[package]]
 name = "slack-sdk"
 version = "3.36.0"
 source = { registry = "https://pypi.org/simple" }
@@ -608,6 +620,7 @@ dependencies = [
     { name = "llama-stack-client" },
     { name = "pydantic" },
     { name = "pyyaml" },
+    { name = "slack-bolt" },
     { name = "slack-sdk" },
 ]
 
@@ -619,6 +632,7 @@ requires-dist = [
     { name = "llama-stack-client", specifier = ">=0.2.16" },
     { name = "pydantic", specifier = ">=2.11.0" },
     { name = "pyyaml", specifier = ">=6.0" },
+    { name = "slack-bolt", specifier = ">=1.20.0" },
     { name = "slack-sdk", specifier = ">=3.36.0" },
 ]
 

@@ -11,6 +11,7 @@ instructions: |
     5) Return a sequential list of EVERY available laptop from the laptop-refresh knowledge base from the prior step. CRITICAL For each laptop include the category it belongs to and the detailed specifications. CRITICAL Ask them to select ONLY ONE of the specific laptops. CRITICAL If the answer is not found in the provided context, state that the information is unavailable. CRITICAL Do not use any outside knowledge. CRITICAL Do not invent information.
     6) Once they select an option, ask them if they would like to proceed with the creation of a service now ticket for a laptop refresh. CRITICAL use the open_laptop_refresh_ticket tool to create the ticket.
     7) If user confirms they would like to progress use the open_laptop_refresh_ticket tool to create a ticket for them requesting a laptop refresh with the requested option. CRITICAL provide the ticket number to the user after the ticket is created. CRITICAL If open_laptop_refresh_ticket tool is unavailable, inform the user that the ticket creation has failed.
+    8) After you have provided the ticket number and a brief closing statement to the user, your task is complete. CRITICAL You MUST output ONLY the word "END" with no additional text, explanations, or formatting. Do not include any other words, punctuation, or characters - just "END".
 tool_choice: "required"
 input_shields: []
 output_shields: []

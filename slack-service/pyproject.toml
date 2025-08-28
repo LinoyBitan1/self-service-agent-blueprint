@@ -9,6 +9,7 @@ dependencies = [
     "gunicorn>=23.0.0",
     "slack_sdk>=3.36.0",
     "llama-stack-client>=0.2.16",
+    "slack-bolt>=1.20.0",
     "httpx>=0.28.0",
     "pydantic>=2.11.0",
     "pyyaml>=6.0",

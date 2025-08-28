@@ -2,16 +2,27 @@ import uuid
 
 
 class SessionManager:
+    """
+    Manages user sessions and conversations with agents.
+    """
+    ROUTING_AGENT_NAME = "routing-agent"
     def __init__(self, agent_manager):
         """
         Initializes the SessionManager.
-
-        Args:
-            agent_manager: An initialized AgentManager instance.
         """
         self.agent_manager = agent_manager
         self.agents = agent_manager.agents()
         self.user_sessions = {}
+
+    def reset_user_session(self, user_id: str):
+        """
+        Removes a user's session from the session manager.
+        """
+        if user_id in self.user_sessions:
+            del self.user_sessions[user_id]
+            print(f"Session for user {user_id} has been reset.")
+            return True
+        return False
 
     def _generate_session_name(self, user_id: str, agent_name: str = None) -> str:
         """Generate a unique session name"""
@@ -27,7 +38,7 @@ class SessionManager:
     ) -> str:
         """Send a message to an agent and return the response"""
         try:
-            response_stream = self.agent_manager._client.agents.turn.create(
+            response_stream = self.agent_manager.create_agent_turn(
                 agent_id=agent_id,
                 session_id=session_id,
                 stream=True,
@@ -63,7 +74,7 @@ class SessionManager:
 
         # Create a new session for the specialist agent
         session_name = self._generate_session_name(user_id, agent_name)
-        new_session = self.agent_manager._client.agents.session.create(
+        new_session = self.agent_manager.create_session(
             new_agent_id, session_name=session_name
         )
 
@@ -85,12 +96,15 @@ class SessionManager:
         Handles an incoming message, manages sessions and history, and returns a response.
         """
         if user_id not in self.user_sessions:
-            routing_agent_id = self.agents.get("routing-agent")
+            routing_agent_id = self.agents.get(self.ROUTING_AGENT_NAME)
             if not routing_agent_id:
                 return "Error: Core routing agent not available."
 
+            print(f"Routing to agent: {self.ROUTING_AGENT_NAME}")
+            print(f"New session for user {user_id} ({user_email})")
+
             session_name = self._generate_session_name(user_id)
-            session = self.agent_manager._client.agents.session.create(
+            session = self.agent_manager.create_session(
                 routing_agent_id, session_name=session_name
             )
             self.user_sessions[user_id] = {
@@ -98,7 +112,6 @@ class SessionManager:
                 "session_id": session.session_id,
                 "email": user_email,
             }
-            print(f"New session for user {user_id} ({user_email})")
 
         current_session = self.user_sessions[user_id]
 
@@ -109,13 +122,27 @@ class SessionManager:
         )
 
         potential_agent_name = agent_response.strip()
-        if (
-            potential_agent_name in self.agents
-            and potential_agent_name != "routing-agent"
-            and current_session["agent_id"] == self.agents.get("routing-agent")
-        ):
+        is_routing_agent = current_session["agent_id"] == self.agents.get(self.ROUTING_AGENT_NAME)
+        if (is_routing_agent and potential_agent_name in self.agents):
             return self._route_to_specialist(
                 user_id, potential_agent_name, text, current_session
             )
+        print(f"Agent response: {agent_response}")
+        if not is_routing_agent and agent_response.strip() == "END":
+            print(f"Routing to agent: {self.ROUTING_AGENT_NAME}")
+            routing_agent_id = self.agents.get(self.ROUTING_AGENT_NAME)
+
+            session_name = self._generate_session_name(user_id)
+            new_session = self.agent_manager.create_session(
+                routing_agent_id, session_name=session_name
+            )
+
+            self.user_sessions[user_id] = {
+                "agent_id": routing_agent_id,
+                "session_id": new_session.session_id,
+                "email": current_session["email"],
+            }
+            # Provide a friendly response to the user indicating the task is done.
+            return "Your request is complete. How else can I help you today?"
 
         return agent_response
