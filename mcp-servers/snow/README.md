@@ -262,6 +262,81 @@ Replace:
 - `YOUR_API_KEY_HERE` with the token copied from Step 2
 - `your-instance.service-now.com` with your ServiceNow instance URL
 
+## Automating API Key Setup
+
+Instead of manually creating users and API keys through the ServiceNow UI, you can use the automated setup script.
+
+### Prerequisites
+
+The automation script requires admin credentials and will create:
+- Service account user
+- Assign roles to the user  
+- Generate REST API key
+
+**Note**: Some steps still require manual completion in the ServiceNow UI (Inbound Authentication Profile and API Access Policies).
+
+### Running the Automation Script
+
+From the `mcp-servers/snow` directory:
+
+```bash
+# Set environment variables
+export SERVICENOW_INSTANCE_URL="https://your-instance.service-now.com"
+export SERVICENOW_USERNAME="admin"
+export SERVICENOW_PASSWORD="your-password"
+
+# Run the script
+cd src
+python -m snow.data.create_api_key_setup
+```
+
+Or directly:
+
+```bash
+python src/snow/data/create_api_key_setup.py
+```
+
+### What Gets Automated
+
+✅ **Automated Steps:**
+1. Create service account user (`svc_self_service_agent_mcp`)
+2. Assign `cmdb_read` role to the user
+3. Create REST API key and retrieve the token
+
+⚠️ **Manual Steps Required:**
+- Create Inbound Authentication Profile (Step 3a in README)
+- Create API Access Policies (Step 3b in README)
+
+The script will output instructions for completing the manual steps and provide a test command to verify your API key works.
+
+### Example Output
+
+```
+================================================================================
+ServiceNow API Key Setup for MCP Agent
+================================================================================
+Instance: https://dev12345.service-now.com
+================================================================================
+
+Step 1: Creating Service Account User
+--------------------------------------------------------------------------------
+  ✅ Created user: svc_self_service_agent_mcp
+     User sys_id: abc123xyz789
+  ✅ Assigned role: cmdb_read
+
+Step 2: Creating REST API Key
+--------------------------------------------------------------------------------
+  ✅ Created API key: MCP Agent API Key - Production
+     API Key sys_id: def456uvw012
+  🔑 API Key Token: your-api-key-token-here
+     ⚠️  SAVE THIS TOKEN - It cannot be retrieved again!
+
+Step 3: Manual Configuration Required
+--------------------------------------------------------------------------------
+⚠️  The following steps must be completed manually in the ServiceNow UI:
+...
+```
+
 ## Error Handling
 
 The server validates all required parameters and returns meaningful error messages:
