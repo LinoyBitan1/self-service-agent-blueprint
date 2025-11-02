@@ -35,19 +35,20 @@ def _should_use_real_servicenow() -> bool:
 
 
 def _create_real_servicenow_ticket(
-    authoritative_user_id: str, preferred_model: str
+    authoritative_user_id: str, preferred_model: str, servicenow_api_key: str | None = None
 ) -> str:
     """Create a real ServiceNow ticket using the API.
 
     Args:
         authoritative_user_id: Authoritative user ID from request headers
         preferred_model: ServiceNow laptop model code
+        servicenow_api_key: Optional ServiceNow API key from request headers
 
     Returns:
         ServiceNow ticket creation result message
     """
     try:
-        client = ServiceNowClient()
+        client = ServiceNowClient(api_key_override=servicenow_api_key)
 
         # Look up user sys_id by email as currently only email is supported
         # authoritative user id
@@ -121,7 +122,32 @@ def _extract_authoritative_user_id(ctx: Context[Any, Any]) -> str | None:
     return None
 
 
-def _get_real_servicenow_laptop_info(authoritative_user_id: str) -> str:
+def _extract_servicenow_api_key(ctx: Context[Any, Any]) -> str | None:
+    """Extract ServiceNow API key from request context headers.
+
+    Args:
+        ctx: Request context containing headers
+
+    Returns:
+        ServiceNow API key if found, None otherwise
+    """
+    try:
+        request_context = ctx.request_context
+        if hasattr(request_context, "request") and request_context.request:
+            request = request_context.request
+            if hasattr(request, "headers"):
+                headers = request.headers
+                api_key = headers.get("SERVICENOW_API_KEY") or headers.get(
+                    "servicenow_api_key"
+                )
+                return str(api_key) if api_key is not None else None
+    except Exception as e:
+        logging.debug(f"Error extracting ServiceNow API key from request context: {e}")
+
+    return None
+
+
+def _get_real_servicenow_laptop_info(authoritative_user_id: str, servicenow_api_key: str | None = None) -> str:
     """Get laptop information from real ServiceNow API.
 
     Note: ServiceNow API currently only supports email-based lookups.
@@ -129,12 +155,13 @@ def _get_real_servicenow_laptop_info(authoritative_user_id: str) -> str:
 
     Args:
         authoritative_user_id: Authoritative user ID from request headers (email or employee ID)
+        servicenow_api_key: Optional ServiceNow API key from request headers
 
     Returns:
         Formatted laptop information string including employee details and hardware specifications
     """
     try:
-        client = ServiceNowClient()
+        client = ServiceNowClient(api_key_override=servicenow_api_key)
 
         laptop_info = client.get_employee_laptop_info(authoritative_user_id)
         if laptop_info:
@@ -187,6 +214,10 @@ def open_laptop_refresh_ticket(
                                NOT the human-readable model name.
     Returns:
         A formatted string containing the ticket details
+    
+    Raises:
+        ValueError: If required parameters are empty, if AUTHORITATIVE_USER_ID header is not present,
+                   or if SERVICENOW_API_KEY header is not set when using real ServiceNow
     """
     if not employee_name:
         raise ValueError("Employee name cannot be empty")
@@ -206,13 +237,19 @@ def open_laptop_refresh_ticket(
             "Authoritative user ID not found in request headers. Ensure AUTHORITATIVE_USER_ID header is set."
         )
 
+    # Extract ServiceNow API key from headers if provided
+    servicenow_api_key = _extract_servicenow_api_key(ctx)
+    if not servicenow_api_key:
+        raise ValueError(
+            "ServiceNow API key not found in request headers. Ensure SERVICENOW_API_KEY header is set for authentication."
+        )
     # Try real ServiceNow first if configured
     if _should_use_real_servicenow():
         logging.info(
             f"Using real ServiceNow API - authoritative_user_id: {authoritative_user_id}, laptop_code: {servicenow_laptop_code}"
         )
         return _create_real_servicenow_ticket(
-            authoritative_user_id, servicenow_laptop_code
+            authoritative_user_id, servicenow_laptop_code, servicenow_api_key
         )
 
     # Use mock implementation
@@ -253,10 +290,11 @@ def get_employee_laptop_info(
         - Laptop Warranty: Current warranty status (Active/Expired)
 
     Raises:
-        ValueError: If AUTHORITATIVE_USER_ID header is not present or employee is not found
+        ValueError: If AUTHORITATIVE_USER_ID header is not present, if SERVICENOW_API_KEY header is not set when using real ServiceNow, or if employee is not found
 
     Examples:
         >>> # With AUTHORITATIVE_USER_ID header set to "alice.johnson@company.com"
+        >>> # and SERVICENOW_API_KEY header set for authentication
         >>> get_employee_laptop_info(ctx)
         # Returns laptop info for alice.johnson@company.com
     """
@@ -268,12 +306,20 @@ def get_employee_laptop_info(
             "Authoritative user ID not found in request headers. Ensure AUTHORITATIVE_USER_ID header is set."
         )
 
+    # Extract ServiceNow API key from headers if provided
+    servicenow_api_key = _extract_servicenow_api_key(ctx)
+
+    if not servicenow_api_key:
+        raise ValueError(
+            "ServiceNow API key not found in request headers. Ensure SERVICENOW_API_KEY header is set for authentication."
+        )
+
     # Try real ServiceNow first if configured, otherwise use mock
     if _should_use_real_servicenow():
         logging.info(
             f"Using real ServiceNow API for laptop info - authoritative_user_id: {authoritative_user_id}"
         )
-        return _get_real_servicenow_laptop_info(authoritative_user_id)
+        return _get_real_servicenow_laptop_info(authoritative_user_id, servicenow_api_key)
 
     # Use mock implementation
     logging.info(

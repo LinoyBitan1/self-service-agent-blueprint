@@ -113,6 +113,7 @@ class StateMachine:
         allowed_tools: list[str] | None = None,
         action_config: dict[str, Any] | None = None,
         token_context: str | None = None,
+        servicenow_api_key: str | None = None,
     ) -> dict[str, Any]:
         """Build kwargs for create_response_with_retry.
 
@@ -161,6 +162,10 @@ class StateMachine:
         # Add token_context if specified
         if token_context is not None:
             response_kwargs["token_context"] = token_context
+
+        # Add servicenow_api_key if specified
+        if servicenow_api_key is not None:
+            response_kwargs["servicenow_api_key"] = servicenow_api_key
 
         return response_kwargs
 
@@ -257,6 +262,7 @@ class StateMachine:
         agent: Any,
         authoritative_user_id: str | None = None,
         token_context: str | None = None,
+        servicenow_api_key: str | None = None,
     ) -> tuple[dict[str, Any], str]:
         """Process llm_processor type states - completely generic and configuration-driven.
 
@@ -320,6 +326,7 @@ class StateMachine:
             user_id,
             allowed_tools,
             token_context=token_context,
+            servicenow_api_key=servicenow_api_key,
         )
 
         response = agent.create_response_with_retry(
@@ -697,6 +704,7 @@ class StateMachine:
         agent: Any,
         authoritative_user_id: str | None = None,
         token_context: str | None = None,
+        servicenow_api_key: str | None = None,
     ) -> tuple[dict[str, Any], str]:
         """Process intent_classifier type states.
 
@@ -739,6 +747,7 @@ class StateMachine:
             user_id,
             allowed_tools,
             token_context=token_context,
+            servicenow_api_key=servicenow_api_key,
         )
 
         intent_response = (
@@ -787,6 +796,7 @@ class StateMachine:
                         action_allowed_tools,
                         action_config=action,
                         token_context=token_context,
+                        servicenow_api_key=servicenow_api_key,
                     )
 
                     response = agent.create_response_with_retry(
@@ -822,6 +832,7 @@ class StateMachine:
         agent: Any,
         authoritative_user_id: str | None = None,
         token_context: str | None = None,
+        servicenow_api_key: str | None = None,
     ) -> tuple[dict[str, Any], str | None]:
         """Process llm_validator type states (like laptop selection validation).
 
@@ -892,6 +903,7 @@ class StateMachine:
             user_id,
             allowed_tools,
             token_context=token_context,
+            servicenow_api_key=servicenow_api_key,
         )
 
         validation_response = (
@@ -935,6 +947,7 @@ class StateMachine:
         agent: Any,
         authoritative_user_id: str | None = None,
         token_context: str | None = None,
+        servicenow_api_key: str | None = None,
     ) -> tuple[dict[str, Any], str | None]:
         """Process the current state based on its configuration.
 
@@ -951,15 +964,15 @@ class StateMachine:
 
         if state_type == "llm_processor":
             return self.process_llm_processor_state(
-                state, state_config, agent, authoritative_user_id, token_context
+                state, state_config, agent, authoritative_user_id, token_context, servicenow_api_key
             )
         elif state_type == "intent_classifier":
             return self.process_intent_classifier_state(
-                state, state_config, agent, authoritative_user_id, token_context
+                state, state_config, agent, authoritative_user_id, token_context, servicenow_api_key
             )
         elif state_type == "llm_validator":
             return self.process_llm_validator_state(
-                state, state_config, agent, authoritative_user_id, token_context
+                state, state_config, agent, authoritative_user_id, token_context, servicenow_api_key
             )
         elif state_type == "terminal":
             return self.process_terminal_state(state, state_config)
@@ -979,6 +992,7 @@ class ConversationSession:
         agent,
         thread_id: str | None = None,
         authoritative_user_id: str | None = None,
+        servicenow_api_key: str | None = None,
     ):
         """
         Initialize a new conversation session with persistent checkpoint storage.
@@ -987,12 +1001,14 @@ class ConversationSession:
             agent: Agent instance to use for this session (config includes state machine path)
             thread_id: Thread identifier for conversation persistence (defaults to generated ID)
             authoritative_user_id: Optional authoritative user ID for the user
+            servicenow_api_key: Optional ServiceNow API key for authentication
         """
         import uuid
 
         self.thread_id = thread_id or str(uuid.uuid4())
         self.agent = agent
         self.authoritative_user_id = authoritative_user_id
+        self.servicenow_api_key = servicenow_api_key
 
         # Get state machine config path from agent configuration
         # First check for environment variable override: LG_PROMPT_<AGENT_NAME>
@@ -1115,6 +1131,7 @@ class ConversationSession:
                             self.agent,
                             self.authoritative_user_id,
                             self.current_token_context,
+                            self.servicenow_api_key,
                         )
                         # Return Command with routing information
                         return Command(goto=next_node, update=updated_state)

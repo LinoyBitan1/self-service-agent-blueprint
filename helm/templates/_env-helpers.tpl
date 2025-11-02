@@ -132,6 +132,32 @@ Generate Request Manager specific environment variables
 Generate Agent Service specific environment variables
 */}}
 {{- define "self-service-agent.agentServiceEnvVars" -}}
+{{/* ServiceNow Configuration - Credentials from secret for passing to MCP server */}}
+{{- $secretName := printf "%s-servicenow-credentials" (include "self-service-agent.fullname" .) }}
+- name: SERVICENOW_INSTANCE_URL
+  valueFrom:
+    secretKeyRef:
+      name: {{ $secretName }}
+      key: servicenow-instance-url
+      optional: true
+- name: SERVICENOW_USERNAME
+  valueFrom:
+    secretKeyRef:
+      name: {{ $secretName }}
+      key: servicenow-username
+      optional: true
+- name: SERVICENOW_PASSWORD
+  valueFrom:
+    secretKeyRef:
+      name: {{ $secretName }}
+      key: servicenow-password
+      optional: true
+- name: SERVICENOW_API_KEY
+  valueFrom:
+    secretKeyRef:
+      name: {{ $secretName }}
+      key: servicenow-api-key
+      optional: true
 {{/* LLM Service Configuration */}}
 - name: LLAMA_STACK_URL
   value: {{ .Values.llama_stack_url | default "http://llamastack:8321" | quote }}

@@ -161,6 +161,7 @@ class Agent:
         mcp_server_configs: list[dict[str, Any]] | None = None,
         authoritative_user_id: str | None = None,
         allowed_tools: list[str] | None = None,
+        servicenow_api_key: str | None = None,
     ) -> list[Any]:
         """Get complete tools array for LlamaStack responses API.
 
@@ -168,6 +169,7 @@ class Agent:
             mcp_server_configs: List of MCP server configurations with name, uri, etc.
             authoritative_user_id: Optional user ID to pass to MCP servers
             allowed_tools: Optional list of tool names to restrict
+            servicenow_api_key: Optional ServiceNow API key to pass to MCP servers for authentication
 
         Returns:
             List of tool configurations for LlamaStack responses API
@@ -212,11 +214,16 @@ class Agent:
                         ),
                     }
 
-                    # Add headers if authoritative_user_id is provided
+                    # Build headers dictionary if any headers need to be added
+                    headers = {}
                     if authoritative_user_id:
-                        mcp_tool["headers"] = {
-                            "AUTHORITATIVE_USER_ID": authoritative_user_id
-                        }
+                        headers["AUTHORITATIVE_USER_ID"] = authoritative_user_id
+                    if servicenow_api_key:
+                        headers["SERVICENOW_API_KEY"] = servicenow_api_key
+                    
+                    # Only add headers if we have at least one header
+                    if headers:
+                        mcp_tool["headers"] = headers
 
                     # Add allowed_tools if specified (from parameter or config)
                     config_allowed_tools = server_config.get("allowed_tools")
@@ -361,6 +368,7 @@ class Agent:
         skip_mcp_servers_only: bool = False,
         current_state_name: str | None = None,
         token_context: str | None = None,
+        servicenow_api_key: str | None = None,
     ) -> str:
         """Create a response with retry logic for empty responses and errors."""
         response = "I apologize, but I'm having difficulty generating a response right now. Please try again."
@@ -378,6 +386,7 @@ class Agent:
                     skip_mcp_servers_only=skip_mcp_servers_only,
                     current_state_name=current_state_name,
                     token_context=token_context,
+                    servicenow_api_key=servicenow_api_key,
                 )
 
                 # Check if response is empty or contains error
@@ -526,6 +535,7 @@ class Agent:
         skip_mcp_servers_only: bool = False,
         current_state_name: str | None = None,
         token_context: str | None = None,
+        servicenow_api_key: str | None = None,
     ) -> str:
         """Create a response using LlamaStack responses API.
 
@@ -538,6 +548,7 @@ class Agent:
             skip_all_tools: If True, skip all tools (MCP servers and knowledge base)
             skip_mcp_servers_only: If True, skip only MCP servers (keep knowledge base tools)
             current_state_name: Optional name of the current state from the state machine YAML
+            servicenow_api_key: Optional ServiceNow API key to pass to MCP servers for authentication
         """
         try:
             # INPUT SHIELD: Check user input before processing
@@ -579,13 +590,13 @@ class Agent:
                 # Skip MCP servers but keep knowledge base tools
                 # Pass None/empty list for mcp_servers to exclude them
                 tools_to_use = self._get_mcp_tools_to_use(
-                    None, authoritative_user_id, allowed_tools
+                    None, authoritative_user_id, allowed_tools, servicenow_api_key
                 )
-            elif authoritative_user_id or allowed_tools:
+            elif authoritative_user_id or allowed_tools or servicenow_api_key:
                 # Include MCP servers and knowledge base tools
                 mcp_server_configs = self.config.get("mcp_servers", [])
                 tools_to_use = self._get_mcp_tools_to_use(
-                    mcp_server_configs, authoritative_user_id, allowed_tools
+                    mcp_server_configs, authoritative_user_id, allowed_tools, servicenow_api_key
                 )
             else:
                 tools_to_use = self.tools

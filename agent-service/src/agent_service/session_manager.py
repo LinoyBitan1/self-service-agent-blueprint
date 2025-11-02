@@ -380,10 +380,18 @@ class ResponsesSessionManager(BaseSessionManager):
                 f"Creating LangGraph session - user_id: {self.user_id}, session_name: {session_name}, routing_agent: {self.ROUTING_AGENT_NAME}"
             )
 
+            # Extract ServiceNow API key from session's user_context if available
+            servicenow_api_key = None
+            if self.request_manager_session_id:
+                db_session = await self.get_session(self.request_manager_session_id)
+                if db_session and db_session.user_context:
+                    servicenow_api_key = db_session.user_context.get("servicenow_api_key")
+
             session = self._create_session_for_agent(
                 routing_agent,
                 self.ROUTING_AGENT_NAME,
                 session_name=session_name,
+                servicenow_api_key=servicenow_api_key,
             )
 
             # Debug: Check StateMachine configuration
@@ -443,6 +451,7 @@ class ResponsesSessionManager(BaseSessionManager):
             current_agent_id = db_session.current_agent_id
             conversation_thread_id = db_session.conversation_thread_id
             conversation_context = db_session.conversation_context or {}
+            user_context = db_session.user_context or {}
 
             if not conversation_thread_id or not current_agent_id:
                 logger.debug(
@@ -466,6 +475,9 @@ class ResponsesSessionManager(BaseSessionManager):
                 )
                 return False
 
+            # Extract ServiceNow API key from user_context if available
+            servicenow_api_key = user_context.get("servicenow_api_key")
+
             # Create session for agent with existing thread_id
             session_name = conversation_context.get(
                 "session_name", f"session-{self.user_id}"
@@ -475,6 +487,7 @@ class ResponsesSessionManager(BaseSessionManager):
                 current_agent_id,
                 session_name=session_name,
                 resume_thread_id=conversation_thread_id,
+                servicenow_api_key=servicenow_api_key,
             )
 
             # Set up the resumed session
@@ -555,6 +568,8 @@ class ResponsesSessionManager(BaseSessionManager):
         authoritative_user_id = kwargs.get(
             "authoritative_user_id", self.user_id or self.user_email
         )
+        # Extract ServiceNow API key if provided
+        servicenow_api_key = kwargs.get("servicenow_api_key")
 
         # Use provided thread_id for resumption or generate a new one
         if resume_thread_id:
@@ -566,6 +581,7 @@ class ResponsesSessionManager(BaseSessionManager):
             agent,
             session_thread_id,
             authoritative_user_id=authoritative_user_id,
+            servicenow_api_key=servicenow_api_key,
         )
 
     def _build_session_data(
@@ -826,11 +842,21 @@ class ResponsesSessionManager(BaseSessionManager):
                 session_name=session_name,
             )
 
+            # Extract ServiceNow API key from current session or database if available
+            servicenow_api_key = None
+            if self.conversation_session and hasattr(self.conversation_session, 'servicenow_api_key'):
+                servicenow_api_key = self.conversation_session.servicenow_api_key
+            elif self.request_manager_session_id:
+                db_session = await self.get_session(self.request_manager_session_id)
+                if db_session and db_session.user_context:
+                    servicenow_api_key = db_session.user_context.get("servicenow_api_key")
+
             # Create session for the specialist agent
             session = self._create_session_for_agent(
                 agent,
                 agent_name,
                 session_name=session_name,
+                servicenow_api_key=servicenow_api_key,
             )
 
             # Update current session

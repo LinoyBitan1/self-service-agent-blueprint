@@ -29,10 +29,15 @@ class ServiceNowClient:
     ServiceNow API client for making requests to ServiceNow instance.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, api_key_override: str | None = None) -> None:
         """
         Initialize the ServiceNow client with configuration from environment variables.
+        
+        Args:
+            api_key_override: Optional API key to use instead of environment variable.
+                             If provided and auth_type is "api_key", this key will be used.
         """
+        self.api_key_override = api_key_override
         self.config = self._load_config_from_env()
         self.auth_manager = AuthManager(self.config.auth, self.config.instance_url)
 
@@ -88,9 +93,10 @@ class ServiceNowClient:
             )
 
         elif auth_type == "api_key":
-            api_key = os.getenv("SERVICENOW_API_KEY")
+            # Use override if provided, otherwise fall back to environment variable
+            api_key = self.api_key_override or os.getenv("SERVICENOW_API_KEY")
             if not api_key:
-                raise ValueError("SERVICENOW_API_KEY is required for API key auth")
+                raise ValueError("SERVICENOW_API_KEY is required for API key auth (provide via header or environment variable)")
 
             auth_config = AuthConfig(
                 type=AuthType.API_KEY,
